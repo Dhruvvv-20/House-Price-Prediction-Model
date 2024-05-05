@@ -1,0 +1,48 @@
+<script>
+        document.addEventListener('DOMContentLoaded', () => {
+        const form = document.querySelector('.form');
+
+        form.addEventListener('submit', (event) => {
+        event.preventDefault();
+
+        const dataToSend = {
+            city : document.querySelector('.location').value,
+            area : document.querySelector('.Area_int').value,
+            bhk : document.querySelector('.bhk').value,
+            bathrooms : document.querySelector('.bath').value
+        }
+
+        const city = document.querySelector('.location').value;
+        const area = document.querySelector('.Area_int').value;
+        const bhk = document.querySelector('.bhk').value;
+        const bathrooms = document.querySelector('.bath').value;
+
+        console.log('City:', dataToSend.city);
+        console.log('Area:', area);
+        console.log('BHK:', bhk);
+        console.log('Bathrooms:', bathrooms);
+
+        fetch('/api/sendData', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(dataToSend)
+        })
+        .then(response => {
+            if (!response.ok) {
+                throw new Error('Network response was not ok');
+            }
+            return response.json();
+        })
+        .then(data => {
+            console.log('Response from backend:', data);
+        })
+        .catch(error => {
+            console.error('There was a problem with the fetch operation:', error);
+        });
+
+    });
+});
+
+    </script>

@@ -1,0 +1,176 @@
+import pandas as pd
+import numpy as np
+import pickle
+
+data = pd.read_csv("Bengaluru_House_Data.csv")
+
+# print(data.head())
+# print(data.info())
+# print(data.isna().sum())
+
+# CLEANING OUR DATASET 
+
+data.drop(columns=['area_type', 'availability','society','balcony'],inplace=True)
+# print(data.info())
+# print(data.isna().sum())
+
+# MISSING VALUES IMPUTATION
+
+# CATEGORICAL COLOUMNS 
+data['location'] = data['location'].fillna('Sarjapur Road')
+# print(data['size'].value_counts())
+data['size'] = data['size'].fillna('2 BHK')
+# print(data.info())
+# print(data.isna().sum())
+
+# NUMERICAL COLUMN
+
+data['bath'] = data['bath'].fillna(data['bath'].median())
+# print(data.info())
+
+data['bhk']=data['size'].str.split().str.get(0).astype(int)
+# print(data[data.bhk > 20])
+# print(data['total_sqft'].unique())
+
+def convertRange(x):
+    temp = x.split('-')
+    if len(temp) == 2:
+        return (float(temp[0])+float(temp[1]))/2
+    try:
+        return float(x)
+    except:
+        return None
+    
+data['total_sqft']=data['total_sqft'].apply(convertRange)
+# print(data.head())
+data['price_per_sqft'] = data['price'] *100000 / data['total_sqft']
+#print(data['price_per_sqft'])
+# print(data.describe())
+data['location'] = data['location'].apply(lambda x: x.strip())
+location_count = data['location'].value_counts()
+# print(location_count)
+location_count_less_10 = location_count[location_count<=10]
+# print(location_count_less_10)
+data['location'] = data['location'].apply(lambda x: 'other' if x in location_count_less_10 else x)
+# print(data['location'].value_counts())
+
+# OUTLIER DETECTION AND REMOVAL
+
+# print(data.describe())
+#  total_sqft          bath         price           bhk  price_per_sqft
+# count  13274.000000  13320.000000  13320.000000  13320.000000    1.327400e+04
+# mean    1559.626694      2.688814    112.565627      2.802778    7.907501e+03
+# std     1238.405258      1.338754    148.971674      1.294496    1.064296e+05
+# min        1.000000      1.000000      8.000000      1.000000    2.678298e+02
+# 25%     1100.000000      2.000000     50.000000      2.000000    4.266865e+03
+# 50%     1276.000000      2.000000     72.000000      3.000000    5.434306e+03
+# 75%     1680.000000      3.000000    120.000000      3.000000    7.311746e+03
+# max    52272.000000     40.000000   3600.000000     43.000000    1.200000e+07
+
+# HERE WE CAN SEE THAT A FLAT HAS A SQUARE FEET VALUE OF 1 THAT IS NOT FEASIBLE SO WE REMOVE ANY FLAT THAT HAS SQUARE FEET LESS THAN 300
+
+data = data[((data['total_sqft']/data['bhk']) >= 300)]
+# print(data.describe())
+
+def remove_outliers_sqft(df):
+    df_output = pd.DataFrame()
+    for key, subdf in df.groupby('location'):
+        m = np.mean(subdf.price_per_sqft)
+        st = np.std(subdf.price_per_sqft)
+        gen_df = subdf[(subdf.price_per_sqft > (m - st)) & (subdf.price_per_sqft <= (m + st))]
+        df_output = pd.concat([df_output, gen_df], ignore_index=True)
+    return df_output
+
+data = remove_outliers_sqft(data)
+# print(data.describe())
+def bhk_outlier_remover(df):
+    exclude_indices = np.array([])
+    for location, location_df in df.groupby('location'):
+        bhk_stats = {}
+        for bhk,bhk_df in location_df.groupby('bhk'):
+            bhk_stats[bhk] = {
+                'mean' : np.mean(bhk_df.price_per_sqft),
+                'std' : np.std(bhk_df.price_per_sqft),
+                'count': bhk_df.shape[0]
+            }
+        for bhk,bhk_df in location_df.groupby('bhk'):
+            stats = bhk_stats.get(bhk-1)
+            if stats and stats['count']>5:
+                exclude_indices = np.append(exclude_indices, bhk_df[bhk_df.price_per_sqft<(stats['mean'])].index.values)
+    return df.drop(exclude_indices,axis='index')
+
+data=bhk_outlier_remover(data)
+data.drop(columns=['size','price_per_sqft'],inplace=True)
+
+# CLEANED DATA
+
+# print(data.head())
+data.to_csv("Cleaned_data.csv")
+
+X = data.drop(columns=['price'])
+y = data['price']
+
+from flask import Flask, render_template, request, jsonify
+from sklearn.model_selection import train_test_split
+from sklearn.linear_model import LinearRegression,Lasso,Ridge
+from sklearn.preprocessing import OneHotEncoder,StandardScaler
+from sklearn.compose import make_column_transformer
+from sklearn.pipeline import make_pipeline
+from sklearn.metrics import r2_score
+
+X_train , X_test , y_train , y_test = train_test_split(X,y, test_size=0.2, random_state=0)
+# print(X_train.shape)
+# print(X_test.shape)
+
+#Applying Linear Regression
+
+column_trans = make_column_transformer((OneHotEncoder(),['location']),remainder='passthrough')
+scaler = StandardScaler(with_mean=False)
+lr = LinearRegression()
+pipe = make_pipeline(column_trans,scaler,lr)
+pipe.fit(X_train,y_train)
+# Predictions
+y_pred = pipe.predict(X_test)
+# print(X_test.head())
+print("The estimated price is : ", y_pred)
+# Evaluate the model
+r2 = r2_score(y_test, y_pred)
+print("R2 Score:", r2)
+location = input("Enter the location: ").strip()  # Remove leading and trailing whitespaces
+sqft = float(input("Enter the total square feet: "))
+bath = float(input("Enter the number of bathrooms: "))
+bhk = int(input("Enter the number of bedrooms (BHK): "))
+
+input = pd.DataFrame([[location,sqft,bath,bhk]],columns=['location','total_sqft','bath','bhk'])
+# prediction = pipe.predict(input)[0]*100000
+# formatted_prediction = "{:,.2f}".format(prediction)  # Format prediction with comma separators for thousands and two decimal places
+# print("The predicted price of the house is: ₹", formatted_prediction)
+
+
+# Assuming the predicted price is in Indian Rupees
+prediction = pipe.predict(input)[0] * 100000
+formatted_prediction = "{:,.2f}".format(prediction)  # Format prediction with comma separators for thousands and two decimal places
+
+# Function to convert number to Indian number system words
+def num_to_indian_words(number): 
+    words = ["", "One", "Two", "Three", "Four", "Five", "Six", "Seven", "Eight", "Nine", "Ten",
+             "Eleven", "Twelve", "Thirteen", "Fourteen", "Fifteen", "Sixteen", "Seventeen", "Eighteen", "Nineteen"]
+    tens_words = ["", "", "Twenty", "Thirty", "Forty", "Fifty", "Sixty", "Seventy", "Eighty", "Ninety"]
+
+    if number < 20:
+        return words[number]
+    elif number < 100:
+        return tens_words[number // 10] + (" " + words[number % 10] if (number % 10 != 0) else "")
+    elif number < 1000:
+        return words[number // 100] + " Hundred" + (" " + num_to_indian_words(number % 100) if (number % 100 != 0) else "")
+    elif number < 100000:
+        return num_to_indian_words(number // 1000) + " Thousand" + (" " + num_to_indian_words(number % 1000) if (number % 1000 != 0) else "")
+    elif number < 10000000:
+        return num_to_indian_words(number // 100000) + " Lakh" + (" " + num_to_indian_words(number % 100000) if (number % 100000 != 0) else "")
+    else:
+        return num_to_indian_words(number // 10000000) + " Crore" + (" " + num_to_indian_words(number % 10000000) if (number % 10000000 != 0) else "")
+
+# Get the worded output
+worded_prediction = num_to_indian_words(int(prediction))
+
+print("The predicted price of the house is: ₹", formatted_prediction, "(", worded_prediction, "Rupees)")

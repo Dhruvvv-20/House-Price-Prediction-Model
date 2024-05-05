@@ -1,0 +1,142 @@
+* {
+    margin: 0;
+    padding: 0;
+}
+
+.container {
+    display: flex;
+}
+
+.left {
+    width: 50%;
+    background-color: rgb(242, 29, 86);
+    height: 100vh;
+    display: flex;
+    align-items: center;
+    flex-direction: column;
+}
+
+.left h1 {
+    color: white;
+    font-size: 60px;
+}
+
+.left h2 {
+    color: white;
+    font-size: 40px;
+}
+
+.left h4 {
+    color: white;
+    font-size: 20px;
+}
+
+.form {
+    color: white;
+    padding-bottom: 20px;
+    width: 75%;
+    display: flex;
+    justify-content: space-around;
+    flex-direction: column;
+}
+
+.head {
+    font-family: "Roboto Condensed", sans-serif;
+    font-optical-sizing: auto;
+    font-weight: 350;
+    font-style: normal;
+    width: 75%;
+    display: flex;
+    justify-content: space-around;
+    align-items: center;
+    flex-direction: column;
+    gap: 10px;
+    padding-top: 60px;
+    padding-bottom: 30px;
+}
+
+form label {
+    font-size: 20px;
+    font-family: "Roboto Condensed", sans-serif;
+    font-optical-sizing: auto;
+    font-weight: 350;
+    font-style: normal;
+    color: white;
+    cursor: pointer;
+}
+
+.location {
+    clear: both;
+}
+
+.locate,
+.Area,
+.Bathrooms,
+.BHK,
+.button {
+    display: flex;
+    justify-content: space-around;
+    flex-direction: column;
+}
+
+form select,
+form input {
+    padding: 10px;
+    font-size: 16px;
+    border: 2px solid #ccc;
+    border-radius: 5px;
+    background-color: #fff;
+    color: #555;
+}
+
+form input:hover {
+    border-color: #999;
+}
+
+form input:focus {
+    outline: none;
+    border-color: #666;
+}
+
+.butt {
+    background-color: #525151;
+    color: white;
+    font-size: 18px;
+    font-weight: bold;
+    text-transform: uppercase;
+    text-decoration: none;
+    padding: 10px 40px;
+    border: 2px solid transparent;
+    border-radius: 30px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    width: 200px;
+    align-self: center;
+}
+
+.butt:hover {
+    background-color: #666;
+    border-color: #666;
+}
+
+.right {
+    width: 50%;
+    background-color: white;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    flex-direction: column;
+    font-family: "Roboto Condensed", sans-serif;
+    font-optical-sizing: auto;
+    font-weight: 350;
+    font-style: normal;
+}
+
+.right h3 {
+    padding-bottom: 10px;
+    font-size: 30px;
+}
+
+.right h2 {
+    font-size: 20px;
+}
